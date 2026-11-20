@@ -13,17 +13,16 @@ Kod `D:\REPOS\Chess\oyun-analiz` klasöründe, GitHub'da `ckilincer/chess-game-r
 2. ✓ chess.com görünümlü tahta, derinlik 1–25
 3. ✓ Tahta + yan analiz + sağda notasyon düzeni, hamle sesleri
 4. ✓ PGN çekme betiği
-5. → GitHub'a ilk gönderim
-6. ○ Sesleri ve düzeni senin geri bildirimine göre ayarlama
+5. ✓ GitHub'a ilk gönderim
+6. → Sesleri ve düzeni senin geri bildirimine göre ayarlama
 
 ## Şu an
-- 2026-11-20: Kod bu klasöre yazıldı; GitHub deposu henüz açılmadı (ilk-kurulum.bat bekliyor).
+- 2026-11-20: Kod GitHub'da: github.com/ckilincer/chess-game-review (herkese açık), yerel ile aynı.
 - 2026-11-20: Analiz sayfası yeni düzen ve seslerle claude.ai'de yayında.
 
 ## Senin yapacakların
-1. `D:\REPOS\Chess\oyun-analiz\ilk-kurulum.bat` dosyasına çift tıkla (GitHub deposunu açar ve kodu gönderir).
-2. Analiz sayfasında sesleri dinleyip yeni düzenin ekranında nasıl durduğunu söyle.
+1. Analiz sayfasında sesleri dinleyip yeni düzenin ekranında nasıl durduğunu söyle.
 
 ## Sıradaki işler
-- İlk gönderimden sonra GitHub'daki depoyu `git ls-remote` ile doğrula; sonraki değişiklikleri `revizyon.bat` ile gönder.
+- Değişiklikleri `revizyon.bat` ile gönder.
 - Geri bildirime göre ses tınısı ve düzen ayarı.

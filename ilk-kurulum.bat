@@ -38,12 +38,9 @@ if "%YEREL%"=="%UZAK%" (
 ) else (
   echo SONUC KIRMIZI: uzak=%UZAK% yerel=%YEREL%
 )
-echo.
-pause
 exit /b 0
 
 :hata
 echo.
 echo SONUC KIRMIZI: bir adim basarisiz oldu, yukaridaki mesaja bak.
-pause
 exit /b 1

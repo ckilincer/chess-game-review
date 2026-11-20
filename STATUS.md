@@ -1,6 +1,6 @@
 # Chess Game Review (oyun-analiz) — durum
 
-**Son güncelleme:** 2026-11-20 · ilk sürüm, GitHub'a ilk gönderim bekliyor
+**Son güncelleme:** 2026-11-20 · ilk sürüm GitHub'da (`149796e`, public)
 
 ## Şu an
 - Tek sayfalık oyun sonrası analiz: `index.html` + `stockfish.js` (Stockfish 10 asm.js, Worker) + `chess.js` 0.10.3.
@@ -8,14 +8,16 @@
 - `pgn_cek.py`: chess.com public API'den bitmiş oyun PGN'i; SSL hatasında Windows `curl`'üne düşer.
 
 ## Sırada
-- İlk kurulum: `ilk-kurulum.bat` (git init + GitHub deposu + ilk push), sonra gönderimler `revizyon.bat` ile.
+- Gönderimler `revizyon.bat` (id `chessgamereview`) ile; `ilk-kurulum.bat` bir kez çalıştı, tekrar gerekmez.
 - Kullanıcıdan: yeni düzen ve seslerin gerçek ekranda/hoparlörde nasıl olduğu.
 
 ## Son oturumlar
+- 2026-11-20 (2): Kod `D:\REPOS\Chess\oyun-analiz`'e taşındı; `ilk-kurulum.bat` ile `ckilincer/chess-game-review` (public) açıldı, `git ls-remote` = yerel `149796e` (ölçüldü). Panel kaydı `chessgamereview` eklendi. Kullanıcı betik sonundaki `pause`'dan ("press any key") rahatsız: kaldırıldı.
 - 2026-11-20: Canlı hamle önerici isteği reddedildi (fair-play), yerine oyun sonrası analiz yapıldı. Sürümler: yeşil tahta + cburnett taşlar; derinlik 1–25 + Durdur; üç sütunlu düzen (tahta ekran yüksekliğinde, yanında analiz, sağda dar notasyon), oyuncu saatleri, WebAudio hamle sesleri, otomatik oynatma. Headless Chrome'da üç boyutta denendi (hata yok). Sesler dinlenemedi.
 - 2026-11-20: `pgn_cek.py` kurum ağında çalışmadı: Python ve curl/schannel ikisi de UNTRUSTED_ROOT — kurum ağı chess.com'u engelleyip TLS'i kendi köküyle kesiyor (kullanıcı chess.com'a yalnız tarayıcıda VPN ile giriyor). Evde/mobil ağda denenmedi.
 
 ## Bilmeden dokunma
+- Bu projede yazılan .bat'larda sonda `pause` yok: kullanıcı "press any key" istemiyor. Yalnız kullanıcı girdisi gerçekten beklenen adımda kalır.
 - Canlı oyunu okuyan / süren oyunda öneri veren özellik eklenmez (fair-play). Kapsam yalnız bitmiş oyun.
 - Taş CSS sınıfları `cw/cb` + `tp/tn/tb/tr/tq/tk` önekli: önek kaldırılırsa fil (`b`) ile siyah (`b`) çakışır, piyonlar fil görünür.
 - Sınıflama ham cp ile değil kazanma şansı düşüşüyle: Stockfish 10 düşük derinlikte açılışta ±1 piyon dalgalanıyor, cp eşiği sahte "hata" üretiyordu.
