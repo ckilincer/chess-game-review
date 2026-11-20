@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oyun Sonrası Analiz</title>
+<style>
+  :root{
+    --bg:#302e2b; --panel:#262522; --panel2:#21201d; --line:#3c3a36; --text:#ececea; --muted:#a19f9b;
+    --light:#ebecd0; --dark:#739552; --accent:#81b64c;
+    --best:#81b64c; --inacc:#f7c631; --mist:#ffa459; --blun:#fa412d;
+    --top:52px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+  button,select{background:#3c3a36;color:var(--text);border:0;border-radius:6px;padding:7px 12px;font:inherit;cursor:pointer}
+  button:hover{background:#4a4843}
+  button.primary{background:var(--accent);color:#fff;font-weight:700;box-shadow:0 3px 0 #45753c}
+  button.primary:hover{background:#95c95e}
+  button:disabled{opacity:.5;cursor:default}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* top bar */
+  .topbar{height:var(--top);display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--panel2);border-bottom:1px solid var(--line)}
+  .topbar h1{font-size:16px;margin:0 8px 0 0;white-space:nowrap}
+  .topbar .grow{flex:1}
+  .progress{height:6px;width:140px;background:#1a1917;border-radius:4px;overflow:hidden}
+  .progress>div{height:100%;width:0;background:var(--accent);transition:width .2s}
+  #status{white-space:nowrap}
+
+  /* main layout: board | analysis | notation */
+  main{height:calc(100% - var(--top));display:grid;grid-template-columns:auto minmax(280px,1fr) 200px;gap:14px;padding:12px 14px}
+  .col{min-height:0}
+  .scroll{overflow:auto}
+
+  /* board column */
+  .boardcol{display:flex;flex-direction:column;gap:6px;--bs:min(calc(100vh - var(--top) - 150px), calc(100vw - 200px - 300px - 110px))}
+  .player{display:flex;align-items:center;justify-content:space-between;width:calc(var(--bs) + 26px);padding-left:26px}
+  .player .name{font-weight:700}
+  .player .elo{color:var(--muted);font-weight:400;margin-left:6px}
+  .clock{background:#3c3a36;color:#a19f9b;font:700 18px/1 ui-monospace,Consolas,monospace;padding:7px 12px;border-radius:5px;min-width:96px;text-align:right}
+  .clock.on{background:#fff;color:#262522}
+  .boardrow{display:flex;gap:8px}
+  .evalbar{width:18px;height:var(--bs);border-radius:3px;overflow:hidden;background:#403d39;position:relative;flex:none}
+  .evalbar .w{position:absolute;left:0;right:0;bottom:0;background:#fff;transition:height .3s}
+  .evalbar span{position:absolute;left:0;right:0;font-size:9px;font-weight:700;text-align:center;bottom:3px;z-index:2;color:#403d39}
+  .evalbar.neg span{bottom:auto;top:3px;color:#fff}
+  .board{position:relative;width:var(--bs);height:var(--bs);display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border-radius:3px;overflow:hidden;user-select:none}
+  .sq{position:relative}
+  .sq.l{background:var(--light)} .sq.d{background:var(--dark)}
+  .sq.hl.l{background:#f5f682} .sq.hl.d{background:#b9ca43}
+  .pc{position:absolute;inset:0;background-size:100% 100%;z-index:1}
+.pc.cw.tp{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PHBhdGggZD0iTTIyLjUgOWMtMi4yMSAwLTQgMS43OS00IDQgMCAuODkuMjkgMS43MS43OCAyLjM4QzE3LjMzIDE2LjUgMTYgMTguNTkgMTYgMjFjMCAyLjAzLjk0IDMuODQgMi40MSA1LjAzLTMgMS4wNi03LjQxIDUuNTUtNy40MSAxMy40N2gyM2MwLTcuOTItNC40MS0xMi40MS03LjQxLTEzLjQ3IDEuNDctMS4xOSAyLjQxLTMgMi40MS01LjAzIDAtMi40MS0xLjMzLTQuNS0zLjI4LTUuNjIuNDktLjY3Ljc4LTEuNDkuNzgtMi4zOCAwLTIuMjEtMS43OS00LTQtNHoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==')}
+.pc.cw.tb{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxnIGZpbGw9IiNmZmYiIHN0cm9rZS1saW5lY2FwPSJidXR0Ij48cGF0aCBkPSJNOSAzNmMzLjM5LS45NyAxMC4xMS40MyAxMy41LTIgMy4zOSAyLjQzIDEwLjExIDEuMDMgMTMuNSAyIDAgMCAxLjY1LjU0IDMgMi0uNjguOTctMS42NS45OS0zIC41LTMuMzktLjk3LTEwLjExLjQ2LTEzLjUtMS0zLjM5IDEuNDYtMTAuMTEuMDMtMTMuNSAxLTEuMzU0LjQ5LTIuMzIzLjQ3LTMtLjUgMS4zNTQtMS45NCAzLTIgMy0yeiIvPjxwYXRoIGQ9Ik0xNSAzMmMyLjUgMi41IDEyLjUgMi41IDE1IDAgLjUtMS41IDAtMiAwLTIgMC0yLjUtMi41LTQtMi41LTQgNS41LTEuNSA2LTExLjUtNS0xNS41LTExIDQtMTAuNSAxNC01IDE1LjUgMCAwLTIuNSAxLjUtMi41IDQgMCAwLS41LjUgMCAyeiIvPjxwYXRoIGQ9Ik0yNSA4YTIuNSAyLjUgMCAxIDEtNSAwIDIuNSAyLjUgMCAxIDEgNSAweiIvPjwvZz48cGF0aCBkPSJNMTcuNSAyNmgxME0xNSAzMGgxNW0tNy41LTE0LjV2NU0yMCAxOGg1IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIi8+PC9nPjwvc3ZnPg==')}
+.pc.cw.tn{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMiAxMGMxMC41IDEgMTYuNSA4IDE2IDI5SDE1YzAtOSAxMC02LjUgOC0yMSIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yNCAxOGMuMzggMi45MS01LjU1IDcuMzctOCA5LTMgMi0yLjgyIDQuMzQtNSA0LTEuMDQyLS45NCAxLjQxLTMuMDQgMC0zLTEgMCAuMTkgMS4yMy0xIDItMSAwLTQuMDAzIDEtNC00IDAtMiA2LTEyIDYtMTJzMS44OS0xLjkgMi0zLjVjLS43My0uOTk0LS41LTItLjUtMyAxLTEgMyAyLjUgMyAyLjVoMnMuNzgtMS45OTIgMi41LTNjMSAwIDEgMyAxIDMiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNOS41IDI1LjVhLjUuNSAwIDEgMS0xIDAgLjUuNSAwIDEgMSAxIDB6bTUuNDMzLTkuNzVhLjUgMS41IDMwIDEgMS0uODY2LS41LjUgMS41IDMwIDEgMSAuODY2LjV6IiBmaWxsPSIjMDAwIi8+PC9nPjwvc3ZnPg==')}
+.pc.cw.tr{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0iI2ZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik05IDM5aDI3di0zSDl2M3ptMy0zdi00aDIxdjRIMTJ6bS0xLTIyVjloNHYyaDVWOWg1djJoNVY5aDR2NSIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiLz48cGF0aCBkPSJNMzQgMTRsLTMgM0gxNGwtMy0zIi8+PHBhdGggZD0iTTMxIDE3djEyLjVIMTRWMTciIHN0cm9rZS1saW5lY2FwPSJidXR0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIi8+PHBhdGggZD0iTTMxIDI5LjVsMS41IDIuNWgtMjBsMS41LTIuNSIvPjxwYXRoIGQ9Ik0xMSAxNGgyMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIvPjwvZz48L3N2Zz4=')}
+.pc.cw.tq{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0iI2ZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik04IDEyYTIgMiAwIDEgMS00IDAgMiAyIDAgMSAxIDQgMHptMTYuNS00LjVhMiAyIDAgMSAxLTQgMCAyIDIgMCAxIDEgNCAwek00MSAxMmEyIDIgMCAxIDEtNCAwIDIgMiAwIDEgMSA0IDB6TTE2IDguNWEyIDIgMCAxIDEtNCAwIDIgMiAwIDEgMSA0IDB6TTMzIDlhMiAyIDAgMSAxLTQgMCAyIDIgMCAxIDEgNCAweiIvPjxwYXRoIGQ9Ik05IDI2YzguNS0xLjUgMjEtMS41IDI3IDBsMi0xMi03IDExVjExbC01LjUgMTMuNS0zLTE1LTMgMTUtNS41LTE0VjI1TDcgMTRsMiAxMnoiIHN0cm9rZS1saW5lY2FwPSJidXR0Ii8+PHBhdGggZD0iTTkgMjZjMCAyIDEuNSAyIDIuNSA0IDEgMS41IDEgMSAuNSAzLjUtMS41IDEtMS41IDIuNS0xLjUgMi41LTEuNSAxLjUuNSAyLjUuNSAyLjUgNi41IDEgMTYuNSAxIDIzIDAgMCAwIDEuNS0xIDAtMi41IDAgMCAuNS0xLjUtMS0yLjUtLjUtMi41LS41LTIgLjUtMy41IDEtMiAyLjUtMiAyLjUtNC04LjUtMS41LTE4LjUtMS41LTI3IDB6IiBzdHJva2UtbGluZWNhcD0iYnV0dCIvPjxwYXRoIGQ9Ik0xMS41IDMwYzMuNS0xIDE4LjUtMSAyMiAwTTEyIDMzLjVjNi0xIDE1LTEgMjEgMCIgZmlsbD0ibm9uZSIvPjwvZz48L3N2Zz4=')}
+.pc.cw.tk{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMi41IDExLjYzVjZNMjAgOGg1IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIi8+PHBhdGggZD0iTTIyLjUgMjVzNC41LTcuNSAzLTEwLjVjMCAwLTEtMi41LTMtMi41cy0zIDIuNS0zIDIuNWMtMS41IDMgMyAxMC41IDMgMTAuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiLz48cGF0aCBkPSJNMTEuNSAzN2M1LjUgMy41IDE1LjUgMy41IDIxIDB2LTdzOS00LjUgNi0xMC41Yy00LTYuNS0xMy41LTMuNS0xNiA0VjI3di0zLjVjLTMuNS03LjUtMTMtMTAuNS0xNi00LTMgNiA1IDEwIDUgMTBWMzd6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTExLjUgMzBjNS41LTMgMTUuNS0zIDIxIDBtLTIxIDMuNWM1LjUtMyAxNS41LTMgMjEgMG0tMjEgMy41YzUuNS0zIDE1LjUtMyAyMSAwIi8+PC9nPjwvc3ZnPg==')}
+.pc.cb.tp{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PHBhdGggZD0iTTIyLjUgOWMtMi4yMSAwLTQgMS43OS00IDQgMCAuODkuMjkgMS43MS43OCAyLjM4QzE3LjMzIDE2LjUgMTYgMTguNTkgMTYgMjFjMCAyLjAzLjk0IDMuODQgMi40MSA1LjAzLTMgMS4wNi03LjQxIDUuNTUtNy40MSAxMy40N2gyM2MwLTcuOTItNC40MS0xMi40MS03LjQxLTEzLjQ3IDEuNDctMS4xOSAyLjQxLTMgMi40MS01LjAzIDAtMi40MS0xLjMzLTQuNS0zLjI4LTUuNjIuNDktLjY3Ljc4LTEuNDkuNzgtMi4zOCAwLTIuMjEtMS43OS00LTQtNHoiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==')}
+.pc.cb.tb{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxnIGZpbGw9IiMwMDAiIHN0cm9rZS1saW5lY2FwPSJidXR0Ij48cGF0aCBkPSJNOSAzNmMzLjM5LS45NyAxMC4xMS40MyAxMy41LTIgMy4zOSAyLjQzIDEwLjExIDEuMDMgMTMuNSAyIDAgMCAxLjY1LjU0IDMgMi0uNjguOTctMS42NS45OS0zIC41LTMuMzktLjk3LTEwLjExLjQ2LTEzLjUtMS0zLjM5IDEuNDYtMTAuMTEuMDMtMTMuNSAxLTEuMzU0LjQ5LTIuMzIzLjQ3LTMtLjUgMS4zNTQtMS45NCAzLTIgMy0yeiIvPjxwYXRoIGQ9Ik0xNSAzMmMyLjUgMi41IDEyLjUgMi41IDE1IDAgLjUtMS41IDAtMiAwLTIgMC0yLjUtMi41LTQtMi41LTQgNS41LTEuNSA2LTExLjUtNS0xNS41LTExIDQtMTAuNSAxNC01IDE1LjUgMCAwLTIuNSAxLjUtMi41IDQgMCAwLS41LjUgMCAyeiIvPjxwYXRoIGQ9Ik0yNSA4YTIuNSAyLjUgMCAxIDEtNSAwIDIuNSAyLjUgMCAxIDEgNSAweiIvPjwvZz48cGF0aCBkPSJNMTcuNSAyNmgxME0xNSAzMGgxNW0tNy41LTE0LjV2NU0yMCAxOGg1IiBzdHJva2U9IiNlY2VjZWMiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiLz48L2c+PC9zdmc+')}
+.pc.cb.tn{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMiAxMGMxMC41IDEgMTYuNSA4IDE2IDI5SDE1YzAtOSAxMC02LjUgOC0yMSIgZmlsbD0iIzAwMCIvPjxwYXRoIGQ9Ik0yNCAxOGMuMzggMi45MS01LjU1IDcuMzctOCA5LTMgMi0yLjgyIDQuMzQtNSA0LTEuMDQyLS45NCAxLjQxLTMuMDQgMC0zLTEgMCAuMTkgMS4yMy0xIDItMSAwLTQuMDAzIDEtNC00IDAtMiA2LTEyIDYtMTJzMS44OS0xLjkgMi0zLjVjLS43My0uOTk0LS41LTItLjUtMyAxLTEgMyAyLjUgMyAyLjVoMnMuNzgtMS45OTIgMi41LTNjMSAwIDEgMyAxIDMiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJNOS41IDI1LjVhLjUuNSAwIDEgMS0xIDAgLjUuNSAwIDEgMSAxIDB6bTUuNDMzLTkuNzVhLjUgMS41IDMwIDEgMS0uODY2LS41LjUgMS41IDMwIDEgMSAuODY2LjV6IiBmaWxsPSIjZWNlY2VjIiBzdHJva2U9IiNlY2VjZWMiLz48cGF0aCBkPSJNMjQuNTUgMTAuNGwtLjQ1IDEuNDUuNS4xNWMzLjE1IDEgNS42NSAyLjQ5IDcuOSA2Ljc1UzM1Ljc1IDI5LjA2IDM1LjI1IDM5bC0uMDUuNWgyLjI1bC4wNS0uNWMuNS0xMC4wNi0uODgtMTYuODUtMy4yNS0yMS4zNC0yLjM3LTQuNDktNS43OS02LjY0LTkuMTktNy4xNmwtLjUxLS4xeiIgZmlsbD0iI2VjZWNlYyIgc3Ryb2tlPSJub25lIi8+PC9nPjwvc3ZnPg==')}
+.pc.cb.tr{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik05IDM5aDI3di0zSDl2M3ptMy41LTdsMS41LTIuNWgxN2wxLjUgMi41aC0yMHptLS41IDR2LTRoMjF2NEgxMnoiIHN0cm9rZS1saW5lY2FwPSJidXR0Ii8+PHBhdGggZD0iTTE0IDI5LjV2LTEzaDE3djEzSDE0eiIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiLz48cGF0aCBkPSJNMTQgMTYuNUwxMSAxNGgyM2wtMyAyLjVIMTR6TTExIDE0VjloNHYyaDVWOWg1djJoNVY5aDR2NUgxMXoiIHN0cm9rZS1saW5lY2FwPSJidXR0Ii8+PHBhdGggZD0iTTEyIDM1LjVoMjFtLTIwLTRoMTltLTE4LTJoMTdtLTE3LTEzaDE3TTExIDE0aDIzIiBmaWxsPSJub25lIiBzdHJva2U9IiNlY2VjZWMiIHN0cm9rZS13aWR0aD0iMSIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIvPjwvZz48L3N2Zz4=')}
+.pc.cb.tq{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxnIHN0cm9rZT0ibm9uZSI+PGNpcmNsZSBjeD0iNiIgY3k9IjEyIiByPSIyLjc1Ii8+PGNpcmNsZSBjeD0iMTQiIGN5PSI5IiByPSIyLjc1Ii8+PGNpcmNsZSBjeD0iMjIuNSIgY3k9IjgiIHI9IjIuNzUiLz48Y2lyY2xlIGN4PSIzMSIgY3k9IjkiIHI9IjIuNzUiLz48Y2lyY2xlIGN4PSIzOSIgY3k9IjEyIiByPSIyLjc1Ii8+PC9nPjxwYXRoIGQ9Ik05IDI2YzguNS0xLjUgMjEtMS41IDI3IDBsMi41LTEyLjVMMzEgMjVsLS4zLTE0LjEtNS4yIDEzLjYtMy0xNC41LTMgMTQuNS01LjItMTMuNkwxNCAyNSA2LjUgMTMuNSA5IDI2eiIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiLz48cGF0aCBkPSJNOSAyNmMwIDIgMS41IDIgMi41IDQgMSAxLjUgMSAxIC41IDMuNS0xLjUgMS0xLjUgMi41LTEuNSAyLjUtMS41IDEuNS41IDIuNS41IDIuNSA2LjUgMSAxNi41IDEgMjMgMCAwIDAgMS41LTEgMC0yLjUgMCAwIC41LTEuNS0xLTIuNS0uNS0yLjUtLjUtMiAuNS0zLjUgMS0yIDIuNS0yIDIuNS00LTguNS0xLjUtMTguNS0xLjUtMjcgMHoiIHN0cm9rZS1saW5lY2FwPSJidXR0Ii8+PHBhdGggZD0iTTExIDM4LjVhMzUgMzUgMSAwIDAgMjMgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiLz48cGF0aCBkPSJNMTEgMjlhMzUgMzUgMSAwIDEgMjMgMG0tMjEuNSAyLjVoMjBtLTIxIDNhMzUgMzUgMSAwIDAgMjIgMG0tMjMgM2EzNSAzNSAxIDAgMCAyNCAwIiBmaWxsPSJub25lIiBzdHJva2U9IiNlY2VjZWMiLz48L2c+PC9zdmc+')}
+.pc.cb.tk{background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NSIgaGVpZ2h0PSI0NSI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMi41IDExLjYzVjYiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiLz48cGF0aCBkPSJNMjIuNSAyNXM0LjUtNy41IDMtMTAuNWMwIDAtMS0yLjUtMy0yLjVzLTMgMi41LTMgMi41Yy0xLjUgMyAzIDEwLjUgMyAxMC41IiBmaWxsPSIjMDAwIiBzdHJva2UtbGluZWNhcD0iYnV0dCIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIvPjxwYXRoIGQ9Ik0xMS41IDM3YzUuNSAzLjUgMTUuNSAzLjUgMjEgMHYtN3M5LTQuNSA2LTEwLjVjLTQtNi41LTEzLjUtMy41LTE2IDRWMjd2LTMuNWMtMy41LTcuNS0xMy0xMC41LTE2LTQtMyA2IDUgMTAgNSAxMFYzN3oiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJNMjAgOGg1IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIi8+PHBhdGggZD0iTTMyIDI5LjVzOC41LTQgNi4wMy05LjY1QzM0LjE1IDE0IDI1IDE4IDIyLjUgMjQuNWwuMDEgMi4xLS4wMS0yLjFDMjAgMTggOS45MDYgMTQgNi45OTcgMTkuODVjLTIuNDk3IDUuNjUgNC44NTMgOSA0Ljg1MyA5IiBzdHJva2U9IiNlY2VjZWMiLz48cGF0aCBkPSJNMTEuNSAzMGM1LjUtMyAxNS41LTMgMjEgMG0tMjEgMy41YzUuNS0zIDE1LjUtMyAyMSAwbS0yMSAzLjVjNS41LTMgMTUuNS0zIDIxIDAiIHN0cm9rZT0iI2VjZWNlYyIvPjwvZz48L3N2Zz4=')}
+  .coord{position:absolute;font-size:calc(var(--bs) / 48);font-weight:700;z-index:2}
+  .coord.f{right:3px;bottom:1px} .coord.r{left:3px;top:2px}
+  .sq.l .coord{color:var(--dark)} .sq.d .coord{color:var(--light)}
+  .badge{position:absolute;right:-6%;top:-6%;width:38%;height:38%;border-radius:50%;z-index:4;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:calc(var(--bs) / 40);box-shadow:0 1px 3px #0008}
+  svg.arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+  .nav{display:flex;gap:6px;width:calc(var(--bs) + 26px);padding-left:26px}
+  .nav button{flex:1;font-size:16px;padding:8px 0}
+
+  /* analysis column */
+  .card{background:var(--panel);border-radius:8px;padding:14px;margin-bottom:12px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px}
+  .movehead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .movehead .san{font-size:22px;font-weight:800}
+  .tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;color:#fff}
+  .t-best{background:var(--best)} .t-ok{background:#5d9948} .t-inacc{background:var(--inacc);color:#262522} .t-mist{background:var(--mist);color:#262522} .t-blun{background:var(--blun)}
+  .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:12px;font-size:14px}
+  .facts dt{color:var(--muted)} .facts dd{margin:0;font-weight:600}
+  .bestmv{color:var(--best)}
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .side .who{font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .big{font-size:26px;font-weight:800}
+  .kv{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);gap:8px}
+  .kv b{color:var(--text)}
+  .chart{width:100%;height:110px;display:block}
+
+  /* notation column */
+  .notation{background:var(--panel);border-radius:8px;display:flex;flex-direction:column;min-height:0}
+  .notation h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0;padding:10px 10px 6px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  tr:nth-child(odd){background:#2b2a27}
+  td{padding:3px 4px;vertical-align:middle;white-space:nowrap}
+  td.n{color:var(--muted);width:28px;text-align:right;padding-right:6px}
+  td.m{cursor:pointer;border-radius:3px;font-weight:600}
+  td.m:hover{background:#3c3a36}
+  td.m.cur{background:#4b4847}
+  .mk{font-weight:800;margin-left:1px}
+  .mk.inacc{color:var(--inacc)} .mk.mist{color:var(--mist)} .mk.blun{color:var(--blun)}
+  .tm{display:block;color:var(--muted);font-size:10px;font-weight:400;font-variant-numeric:tabular-nums}
+
+  /* PGN dialog */
+  .overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .overlay.open{display:flex}
+  .dialog{background:var(--panel);border-radius:10px;padding:18px;width:min(640px,100%)}
+  .dialog h3{margin:0 0 4px}
+  textarea{width:100%;min-height:180px;margin-top:10px;background:#1a1917;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:10px;font:12px/1.4 ui-monospace,Consolas,monospace;resize:vertical}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .err{color:var(--blun);font-size:13px;margin-top:8px}
+
+  /* smaller screens */
+  @media (max-width:1150px){
+    main{grid-template-columns:auto minmax(260px,1fr)}
+    .boardcol{--bs:min(calc(100vh - var(--top) - 150px), calc(100vw - 300px - 90px))}
+    .notation{grid-column:2}
+    .analysis{grid-row:1}
+    main{grid-template-rows:1fr 230px}
+    .boardcol{grid-row:1 / span 2}
+  }
+  @media (max-width:760px){
+    body{overflow:auto}
+    main{display:block;height:auto}
+    .boardcol{--bs:calc(100vw - 54px)}
+    .notation{max-height:260px;margin-bottom:12px}
+    .topbar{flex-wrap:wrap;height:auto;padding:8px 12px}
+    :root{--top:0px}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>Oyun Sonrası Analiz</h1>
+  <button class="primary" id="openPgn">PGN yükle</button>
+  <label class="muted">Derinlik <select id="depth"></select></label>
+  <button id="stop" style="display:none">Durdur</button>
+  <div class="progress"><div id="prog"></div></div>
+  <span class="muted" id="status">Motor yükleniyor…</span>
+  <span class="grow"></span>
+  <button id="sound" title="Ses aç/kapa">🔊</button>
+</div>
+
+<main>
+  <section class="col boardcol">
+    <div class="player" id="pTop"><span><span class="name"></span><span class="elo"></span></span><span class="clock"></span></div>
+    <div class="boardrow">
+      <div class="evalbar" id="evalbar"><div class="w" id="evalw" style="height:50%"></div><span id="evaltxt">0.0</span></div>
+      <div class="board" id="board"></div>
+    </div>
+    <div class="player" id="pBot"><span><span class="name"></span><span class="elo"></span></span><span class="clock"></span></div>
+    <div class="nav">
+      <button id="bStart" title="Başa (Home)">⏮</button>
+      <button id="bPrev" title="Geri (←)">◀</button>
+      <button id="bPlay" title="Otomatik oynat (boşluk)">⏯</button>
+      <button id="bNext" title="İleri (→)">▶</button>
+      <button id="bEnd" title="Sona (End)">⏭</button>
+      <button id="bFlip" title="Tahtayı çevir (F)">⇅</button>
+    </div>
+  </section>
+
+  <section class="col analysis scroll">
+    <div class="card" id="moveCard">
+      <h2>Hamle</h2>
+      <div id="info"><span class="muted">PGN yükleyip analiz et; sonra ← → tuşlarıyla ya da notasyondan hamlelerde gez.</span></div>
+    </div>
+    <div class="card"><h2>Özet</h2><div class="summary" id="summary"><span class="muted">Analizden sonra burada görünür.</span></div></div>
+    <div class="card" id="timeBox" style="display:none">
+      <h2>Hamle başına süre</h2>
+      <svg class="chart" id="chart" preserveAspectRatio="none"></svg>
+      <div class="muted">Açık çubuk beyaz, koyu çubuk siyah. Kırmızı uç: o hamle hata. Çubuğa tıklayınca o hamleye gider.</div>
+    </div>
+    <div class="muted" style="padding:0 4px 10px">Derinlik ile Elo karşılığı yaklaşıktır. Hamleler kazanma şansındaki düşüşe göre sınıflanır: %10+ kusur, %20+ hata, %30+ büyük hata. 20 ve üstü derinlikler yavaştır; gerekirse Durdur'a bas.</div>
+  </section>
+
+  <section class="col notation">
+    <h2>Notasyon</h2>
+    <div class="scroll" style="flex:1;min-height:0;position:relative"><table id="moves"></table></div>
+  </section>
+</main>
+
+<div class="overlay" id="dlg">
+  <div class="dialog">
+    <h3>Oyun yükle</h3>
+    <div class="muted">chess.com'da biten oyunu aç → Paylaş → PGN → Kopyala, sonra buraya yapıştır.</div>
+    <textarea id="pgn" placeholder="[Event &quot;Live Chess&quot;] …"></textarea>
+    <div class="err" id="err"></div>
+    <div class="row">
+      <button class="primary" id="go">Analiz et</button>
+      <button id="demo">Örnek oyun</button>
+      <span class="grow" style="flex:1"></span>
+      <button id="closeDlg">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<script src="chess.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const FILES = 'abcdefgh';
+  const DEMO = `[Event "Örnek"]
+[White "Beyaz"]
+[Black "Siyah"]
+[WhiteElo "1450"]
+[BlackElo "1480"]
+[Result "0-1"]
+[TimeControl "180+2"]
+
+1. e4 {[%clk 0:03:01.1]} 1... e5 {[%clk 0:03:01.4]} 2. Nf3 {[%clk 0:03:02.0]} 2... Nc6 {[%clk 0:03:02.2]} 3. Bc4 {[%clk 0:03:02.8]} 3... Nd4 {[%clk 0:02:58.5]} 4. Nxe5 {[%clk 0:03:00.1]} 4... Qg5 {[%clk 0:02:55.0]} 5. Nxf7 {[%clk 0:02:51.3]} 5... Qxg2 {[%clk 0:02:51.9]} 6. Rf1 {[%clk 0:02:50.0]} 6... Qxe4+ {[%clk 0:02:49.7]} 7. Be2 {[%clk 0:02:41.2]} 7... Nf3# {[%clk 0:02:48.1]} 0-1`;
+
+  // ---------- depth list ----------
+  const ELO = {1:1000,2:1150,3:1300,4:1450,5:1600,6:1750,7:1850,8:1950,9:2050,10:2200,11:2350,12:2500,13:2600,14:2700,15:2800,16:2850,17:2900,18:2950,19:3000,20:3050,21:3100,22:3150,23:3200,24:3250,25:3300};
+  const SPEED = d => d <= 10 ? 'çok hızlı' : d <= 14 ? 'hızlı' : d <= 17 ? 'orta' : d <= 20 ? 'yavaş' : 'çok yavaş';
+  for (let d=1; d<=25; d++){
+    const o = document.createElement('option'); o.value = d;
+    o.textContent = `${d} · ~${ELO[d]} Elo · ${SPEED(d)}`;
+    if (d === 12) o.selected = true;
+    $('depth').appendChild(o);
+  }
+
+  // ---------- state ----------
+  let positions = [], evals = [], header = {}, timeBase = null;
+  let cur = 0, flipped = false, analyzing = false, stopRequested = false, playTimer = null;
+
+  // ---------- sound (synthesised wood-on-wood knocks) ----------
+  let actx = null, soundOn = true;
+  try { soundOn = localStorage.getItem('pgnSound') !== 'off'; } catch(e){}
+  $('sound').textContent = soundOn ? '🔊' : '🔇';
+  function ctx(){
+    if (!actx){ try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return null; } }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function knock(t, {freq=1700, q=1.2, gain=0.9, body=170, len=0.07} = {}){
+    const a = ctx(); if (!a) return;
+    const n = Math.floor(a.sampleRate * len), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    for (let i=0;i<n;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/n, 6);
+    const src = a.createBufferSource(); src.buffer = buf;
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+    const g = a.createGain(); g.gain.value = gain;
+    src.connect(bp).connect(g).connect(a.destination); src.start(t);
+    const o = a.createOscillator(), og = a.createGain();
+    o.frequency.setValueAtTime(body, t); o.frequency.exponentialRampToValueAtTime(body*0.6, t+0.08);
+    og.gain.setValueAtTime(gain*0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t+0.09);
+    o.connect(og).connect(a.destination); o.start(t); o.stop(t+0.1);
+  }
+  function tone(t, f, len=0.12, gain=0.12, type='sine'){
+    const a = ctx(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t+0.01); g.gain.exponentialRampToValueAtTime(0.0001, t+len);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t+len+0.02);
+  }
+  function playSound(p){
+    if (!soundOn || !p) return;
+    const a = ctx(); if (!a) return;
+    const t = a.currentTime + 0.01;
+    if (p.flags && (p.flags.includes('k') || p.flags.includes('q'))){ knock(t); knock(t+0.11, {freq:1500}); }
+    else if (p.captured){ knock(t, {freq:1100, q:0.8, gain:1.1, body:120}); knock(t+0.035, {freq:2200, gain:0.5, len:0.04}); }
+    else knock(t);
+    if (p.flags && p.flags.includes('p')){ tone(t+0.08, 660, .1); tone(t+0.16, 990, .14); }
+    if (p.san.endsWith('#')){ tone(t+0.12, 523, .25, .14, 'triangle'); tone(t+0.32, 392, .4, .14, 'triangle'); }
+    else if (p.san.endsWith('+')) tone(t+0.06, 1046, .12, .08, 'triangle');
+  }
+
+  // ---------- engine ----------
+  let engine, engineReady = false, pending = null, lastInfo = null;
+  function startEngine(){
+    try { engine = new Worker('stockfish.js'); }
+    catch(e){ $('status').textContent = 'Motor başlatılamadı: ' + e.message; return; }
+    engine.onmessage = e => onLine(String(e.data));
+    engine.onerror = () => { $('status').textContent = 'Motor hatası'; };
+    engine.postMessage('uci'); engine.postMessage('setoption name Hash value 32'); engine.postMessage('isready');
+  }
+  function onLine(line){
+    if (line === 'readyok' && !engineReady){ engineReady = true; $('status').textContent = 'Hazır'; return; }
+    if (!pending) return;
+    if (line.startsWith('info') && line.includes(' score ') && !line.includes('bound')){
+      const m = line.match(/score (cp|mate) (-?\d+)/), pv = line.match(/ pv (\S+)/);
+      if (m) lastInfo = {type:m[1], val:+m[2], pv: pv ? pv[1] : null};
+    } else if (line.startsWith('bestmove')){
+      const best = line.split(' ')[1], r = pending; pending = null;
+      r({info:lastInfo, best: best && best !== '(none)' ? best : null});
+    }
+  }
+  const analyse = (fen, depth) => new Promise(res => { lastInfo = null; pending = res; engine.postMessage('position fen ' + fen); engine.postMessage('go depth ' + depth); });
+
+  // ---------- PGN ----------
+  function parsePGN(text){
+    header = {}; timeBase = null;
+    text = text.replace(/\r/g,'');
+    text.replace(/\[(\w+)\s+"([^"]*)"\]/g, (_,k,v) => { header[k]=v; return ''; });
+    let body = text.replace(/\[(\w+)\s+"([^"]*)"\]/g,'');
+    const clocks = [];
+    body.replace(/\{([^}]*)\}/g, (_,c) => { const m = c.match(/\[%clk\s+(\d+):(\d+):(\d+(?:\.\d+)?)\]/); clocks.push(m ? (+m[1])*3600 + (+m[2])*60 + parseFloat(m[3]) : null); return ''; });
+    body = body.replace(/\{[^}]*\}/g,' ').replace(/;[^\n]*/g,' ');
+    let prev; do { prev = body; body = body.replace(/\([^()]*\)/g,' '); } while (body !== prev);
+    body = body.replace(/\$\d+/g,' ').replace(/\d+\.(\.\.)?/g,' ').replace(/(1-0|0-1|1\/2-1\/2|\*)\s*$/,' ');
+    const tokens = body.split(/\s+/).filter(Boolean);
+    if (!tokens.length) throw new Error('PGN içinde hamle bulunamadı.');
+    const game = new Chess();
+    if (header.FEN && !game.load(header.FEN)) throw new Error('PGN içindeki başlangıç FEN geçersiz.');
+    const pos = [{fen: game.fen()}];
+    tokens.forEach((t,i) => {
+      const mv = game.move(t.replace(/[!?]+$/,''), {sloppy:true});
+      if (!mv) throw new Error(`Hamle okunamadı: "${t}" (${i+1}. yarım hamle)`);
+      pos.push({fen: game.fen(), san: mv.san, from: mv.from, to: mv.to, color: mv.color, captured: mv.captured, flags: mv.flags});
+    });
+    const timed = clocks.filter(c => c !== null);
+    const tc = (header.TimeControl||'').match(/^(\d+)(?:\+(\d+))?$/);
+    let inc = 0; if (tc){ timeBase = +tc[1]; inc = +(tc[2]||0); }
+    if (timed.length === tokens.length){
+      const last = {w: timeBase, b: timeBase};
+      for (let i=1;i<pos.length;i++){
+        const p = pos[i]; p.clk = timed[i-1];
+        if (last[p.color] != null) p.spent = Math.max(0, last[p.color] - p.clk + inc);
+        last[p.color] = p.clk;
+      }
+    }
+    return pos;
+  }
+
+  // ---------- evaluation math ----------
+  const toCp = e => e.mate != null ? (e.mate > 0 ? 10000 - e.mate*10 : e.mate < 0 ? -10000 - e.mate*10 : (e.matedSide==='w' ? -10000 : 10000)) : e.cp;
+  const clamp = v => Math.max(-1000, Math.min(1000, v));
+  const winPct = cp => 50 + 50*(2/(1+Math.exp(-0.00368208*cp)) - 1);
+  function fmtEval(e){
+    if (!e) return '';
+    if (e.mate != null){ if (e.mate === 0) return e.matedSide === 'w' ? '0-1' : '1-0'; return 'M' + Math.abs(e.mate); }
+    const v = Math.abs(e.cp/100); return v.toFixed(1);
+  }
+  function classify(i){
+    const b = evals[i-1], a = evals[i], p = positions[i];
+    if (!b || !a) return null;
+    const sign = p.color === 'w' ? 1 : -1;
+    const before = clamp(toCp(b))*sign, after = clamp(toCp(a))*sign;
+    const isBest = !!b.best && b.best.slice(0,4) === p.from + p.to;
+    const loss = isBest ? 0 : Math.max(0, before - after);
+    const drop = isBest ? 0 : Math.max(0, winPct(before) - winPct(after));
+    const acc = Math.max(0, Math.min(100, 103.1668*Math.exp(-0.04354*drop) - 3.1669));
+    let cls = 'ok', label = 'İyi';
+    if (isBest){ cls='best'; label='En iyi'; }
+    else if (drop >= 30){ cls='blun'; label='Büyük hata'; }
+    else if (drop >= 20){ cls='mist'; label='Hata'; }
+    else if (drop >= 10){ cls='inacc'; label='Kusur'; }
+    return {loss, cls, label, isBest, acc: isBest ? 100 : acc};
+  }
+  const MARK = {blun:'??', mist:'?', inacc:'?!', best:'★', ok:''};
+  const BADGE = {blun:'var(--blun)', mist:'var(--mist)', inacc:'var(--inacc)', best:'var(--best)'};
+
+  // ---------- run ----------
+  async function run(){
+    $('err').textContent = '';
+    if (!engineReady){ $('err').textContent = 'Motor henüz hazır değil, birkaç saniye sonra tekrar dene.'; return; }
+    let pos; try { pos = parsePGN($('pgn').value); } catch(e){ $('err').textContent = e.message; return; }
+    $('dlg').classList.remove('open');
+    stopAuto();
+    positions = pos; evals = new Array(pos.length).fill(null); cur = 0;
+    const myName = (header.White||'');
+    analyzing = true; stopRequested = false; $('go').disabled = $('demo').disabled = true; $('stop').style.display = '';
+    renderAll();
+    const depth = +$('depth').value;
+    for (let i=0;i<pos.length && !stopRequested;i++){
+      const g = new Chess(pos[i].fen), stm = g.turn();
+      let e;
+      if (g.in_checkmate()) e = {mate:0, matedSide: stm, best:null};
+      else if (g.in_draw() || g.in_stalemate()) e = {cp:0, best:null};
+      else {
+        const r = await analyse(pos[i].fen, depth), s = stm === 'w' ? 1 : -1;
+        e = {best: r.best};
+        if (r.info && r.info.type === 'mate') e.mate = r.info.val * s; else e.cp = (r.info ? r.info.val : 0) * s;
+        if (r.best){ const m = g.move({from:r.best.slice(0,2), to:r.best.slice(2,4), promotion:r.best[4]||'q'}); e.bestSan = m ? m.san : r.best; }
+      }
+      evals[i] = e;
+      $('prog').style.width = ((i+1)/pos.length*100).toFixed(1)+'%';
+      $('status').textContent = `Analiz: ${i+1}/${pos.length}`;
+      if (i % 4 === 0 || i === pos.length-1) renderAll();
+    }
+    analyzing = false; $('go').disabled = $('demo').disabled = false; $('stop').style.display = 'none';
+    $('status').textContent = stopRequested ? 'Durduruldu' : 'Analiz tamam';
+    renderAll();
+  }
+
+  // ---------- rendering ----------
+  const fmtClock = s => { if (s == null) return '–'; const m = Math.floor(s/60), sec = s - m*60; return s < 20 ? `${m}:${sec.toFixed(1).padStart(4,'0')}` : `${m}:${String(Math.floor(sec)).padStart(2,'0')}`; };
+  const fmtTime = s => s == null ? '' : s < 60 ? s.toFixed(1)+'s' : Math.floor(s/60)+'dk '+Math.round(s%60)+'s';
+  function clockAt(i, color){
+    let v = timeBase;
+    for (let k=1;k<=i;k++) if (positions[k].color === color && positions[k].clk != null) v = positions[k].clk;
+    return v;
+  }
+  function renderPlayers(){
+    const stm = positions.length ? positions[cur].fen.split(' ')[1] : 'w';
+    const info = c => ({name: (c==='w' ? header.White : header.Black) || (c==='w' ? 'Beyaz' : 'Siyah'), elo: c==='w' ? header.WhiteElo : header.BlackElo, clk: positions.length ? clockAt(cur, c) : null});
+    const fill = (el, c) => {
+      const d = info(c);
+      el.querySelector('.name').textContent = (c==='w' ? '♔ ' : '♚ ') + d.name;
+      el.querySelector('.elo').textContent = d.elo ? `(${d.elo})` : '';
+      const ck = el.querySelector('.clock'); ck.textContent = fmtClock(d.clk); ck.classList.toggle('on', stm === c && positions.length > 1);
+      ck.style.visibility = d.clk == null ? 'hidden' : '';
+    };
+    fill($('pTop'), flipped ? 'w' : 'b'); fill($('pBot'), flipped ? 'b' : 'w');
+  }
+  function renderBoard(){
+    const fen = positions.length ? positions[cur].fen : new Chess().fen();
+    const g = new Chess(fen), b = $('board'); b.innerHTML = '';
+    const last = cur > 0 ? positions[cur] : null, c = cur > 0 ? classify(cur) : null;
+    for (let r=0;r<8;r++) for (let col=0;col<8;col++){
+      const rank = flipped ? r+1 : 8-r, file = flipped ? 7-col : col, sqName = FILES[file] + rank;
+      const d = document.createElement('div');
+      d.className = 'sq ' + ((rank+file)%2===1 ? 'l' : 'd');
+      if (last && (last.from === sqName || last.to === sqName)) d.classList.add('hl');
+      const pc = g.get(sqName);
+      if (pc){ const s = document.createElement('div'); s.className = 'pc c' + pc.color + ' t' + pc.type; d.appendChild(s); }
+      if (r === 7){ const f = document.createElement('span'); f.className='coord f'; f.textContent = FILES[file]; d.appendChild(f); }
+      if (col === 0){ const f = document.createElement('span'); f.className='coord r'; f.textContent = rank; d.appendChild(f); }
+      if (last && last.to === sqName && c && BADGE[c.cls]){ const bd = document.createElement('div'); bd.className='badge'; bd.style.background = BADGE[c.cls]; bd.textContent = MARK[c.cls]; d.appendChild(bd); }
+      b.appendChild(d);
+    }
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS,'svg');
+    svg.setAttribute('class','arrows'); svg.setAttribute('viewBox','0 0 8 8');
+    svg.innerHTML = '<defs><marker id="hb" markerWidth="3" markerHeight="3" refX="1.5" refY="1.5" orient="auto"><path d="M0,0 L3,1.5 L0,3 z" fill="rgba(129,182,76,.9)"/></marker></defs>';
+    const xy = s => { const f = FILES.indexOf(s[0]), rk = +s[1]; return [(flipped ? 7-f : f)+.5, (flipped ? rk-1 : 8-rk)+.5]; };
+    if (cur > 0){
+      const pe = evals[cur-1], p = positions[cur];
+      if (pe && pe.best && pe.best.slice(0,4) !== p.from+p.to){
+        const [x1,y1] = xy(pe.best.slice(0,2)), [x2,y2] = xy(pe.best.slice(2,4)), L = Math.hypot(x2-x1,y2-y1), k = (L-.3)/L;
+        const l = document.createElementNS(NS,'line');
+        Object.entries({x1, y1, x2: x1+(x2-x1)*k, y2: y1+(y2-y1)*k, stroke:'rgba(129,182,76,.9)', 'stroke-width':.18, 'stroke-linecap':'round', 'marker-end':'url(#hb)'}).forEach(([a,v]) => l.setAttribute(a,v));
+        svg.appendChild(l);
+      }
+    }
+    b.appendChild(svg);
+  }
+  function renderEval(){
+    const e = evals[cur], cp = e ? clamp(toCp(e)) : 0, pct = e ? winPct(cp) : 50;
+    $('evalw').style.height = (flipped ? 100-pct : pct) + '%';
+    if (flipped){ $('evalw').style.top = '0'; $('evalw').style.bottom = ''; } else { $('evalw').style.bottom = '0'; $('evalw').style.top = ''; }
+    $('evaltxt').textContent = e ? fmtEval(e) : '';
+    $('evalbar').classList.toggle('neg', (cp < 0) !== flipped);
+  }
+  function renderInfo(){
+    const box = $('info');
+    if (!positions.length) return;
+    if (cur === 0){
+      const e0 = evals[0];
+      box.innerHTML = `<div class="movehead"><span class="san">Başlangıç</span></div><dl class="facts">${e0 && e0.bestSan ? `<dt>Motorun önerisi</dt><dd class="bestmv">${e0.bestSan}</dd>` : ''}<dt>Hamle sayısı</dt><dd>${positions.length-1} yarım hamle</dd></dl>`;
+      return;
+    }
+    const p = positions[cur], c = classify(cur), pe = evals[cur-1], e = evals[cur];
+    const no = Math.ceil(cur/2) + (positions[0].fen.split(' ')[1] === 'b' ? 0 : 0);
+    let html = `<div class="movehead"><span class="san">${Math.floor((cur+1)/2)}${p.color==='w'?'.':'…'} ${p.san}</span>${c ? `<span class="tag t-${c.cls}">${c.label}</span>` : (analyzing ? '<span class="muted">analiz ediliyor…</span>' : '')}</div><dl class="facts">`;
+    html += `<dt>Oynayan</dt><dd>${p.color==='w' ? (header.White||'Beyaz') : (header.Black||'Siyah')}</dd>`;
+    if (pe && pe.bestSan && !(c && c.isBest)) html += `<dt>Motorun önerisi</dt><dd class="bestmv">${pe.bestSan}</dd>`;
+    if (c && !c.isBest) html += `<dt>Kayıp</dt><dd>${(c.loss/100).toFixed(2)} piyon</dd>`;
+    if (e) html += `<dt>Değerlendirme</dt><dd>${(toCp(e) >= 0 ? 'Beyaz ' : 'Siyah ') + (e.mate != null && e.mate !== 0 ? Math.abs(e.mate) + ' hamlede mat' : e.mate === 0 ? 'kazandı' : '+' + fmtEval(e))}</dd>`;
+    if (p.spent != null) html += `<dt>Harcanan süre</dt><dd>${fmtTime(p.spent)}</dd><dt>Kalan süre</dt><dd>${fmtClock(p.clk)}</dd>`;
+    box.innerHTML = html + '</dl>';
+  }
+  function renderMoves(){
+    const t = $('moves'); t.innerHTML = '';
+    let tr = null, moveNo = positions.length ? +positions[0].fen.split(' ')[5] : 1;
+    for (let i=1;i<positions.length;i++){
+      const p = positions[i];
+      if (p.color === 'w' || !tr){
+        tr = document.createElement('tr');
+        tr.innerHTML = `<td class="n">${moveNo}.</td>`;
+        if (p.color === 'b') tr.innerHTML += '<td class="m">…</td>';
+        t.appendChild(tr);
+      }
+      const c = classify(i), td = document.createElement('td');
+      td.className = 'm' + (i===cur ? ' cur' : ''); td.dataset.i = i;
+      const mk = c && c.cls !== 'best' ? MARK[c.cls] : '';
+      td.innerHTML = `${p.san}<span class="mk ${c?c.cls:''}">${mk}</span>` + (p.spent != null ? `<span class="tm">${fmtTime(p.spent)}</span>` : '');
+      td.onclick = () => { stopAuto(); go(i, true); };
+      tr.appendChild(td);
+      if (p.color === 'b'){ moveNo++; tr = null; }
+    }
+  }
+  function renderSummary(){
+    if (!positions.length) return;
+    const mk = name => ({name, acc:[], loss:[], inacc:0, mist:0, blun:0, best:0, time:0, tN:0, maxT:0});
+    const sides = {w: mk(header.White || 'Beyaz'), b: mk(header.Black || 'Siyah')};
+    for (let i=1;i<positions.length;i++){
+      const p = positions[i], s = sides[p.color], c = classify(i);
+      if (c){ s.acc.push(c.acc); s.loss.push(Math.min(c.loss,1000)); if (c.cls in s) s[c.cls]++; }
+      if (p.spent != null){ s.time += p.spent; s.tN++; s.maxT = Math.max(s.maxT, p.spent); }
+    }
+    const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+    $('summary').innerHTML = ['w','b'].map(k => { const s = sides[k]; return `<div class="side">
+      <div class="who">${k==='w'?'♔':'♚'} ${s.name}</div>
+      <div class="big">${s.acc.length ? avg(s.acc).toFixed(1) : '–'}<span class="muted"> isabet</span></div>
+      <div class="kv">En iyi hamle <b style="color:var(--best)">${s.best}</b></div>
+      <div class="kv">Kusur <b style="color:var(--inacc)">${s.inacc}</b></div>
+      <div class="kv">Hata <b style="color:var(--mist)">${s.mist}</b></div>
+      <div class="kv">Büyük hata <b style="color:var(--blun)">${s.blun}</b></div>
+      <div class="kv">Ort. kayıp <b>${Math.round(avg(s.loss))} cp</b></div>
+      ${s.tN ? `<div class="kv">Ort. süre <b>${fmtTime(s.time/s.tN)}</b></div><div class="kv">En uzun <b>${fmtTime(s.maxT)}</b></div>` : ''}
+    </div>`; }).join('');
+  }
+  function renderChart(){
+    const timed = positions.slice(1).filter(p => p.spent != null);
+    $('timeBox').style.display = timed.length ? '' : 'none';
+    if (!timed.length) return;
+    const n = positions.length-1, H = 100, max = Math.max(...timed.map(p => p.spent), 1), bw = 100/n;
+    let s = '';
+    for (let i=1;i<=n;i++){
+      const p = positions[i]; if (p.spent == null) continue;
+      const h = p.spent/max*(H-4), c = classify(i), x = (i-1)*bw;
+      if (i === cur) s += `<rect x="${x}" y="0" width="${bw}" height="${H}" fill="rgba(129,182,76,.18)"/>`;
+      s += `<rect x="${x+bw*.12}" y="${H-h}" width="${bw*.76}" height="${h}" fill="${p.color==='w'?'#e6e5e2':'#7a7772'}" data-i="${i}" style="cursor:pointer"><title>${Math.ceil(i/2)}. ${p.san}: ${fmtTime(p.spent)}</title></rect>`;
+      if (c && (c.cls==='mist'||c.cls==='blun')) s += `<rect x="${x+bw*.12}" y="${H-h}" width="${bw*.76}" height="${Math.min(4,h)}" fill="var(--blun)"/>`;
+    }
+    const svg = $('chart'); svg.setAttribute('viewBox', `0 0 100 ${H}`); svg.innerHTML = s;
+    svg.querySelectorAll('rect[data-i]').forEach(r => r.onclick = () => { stopAuto(); go(+r.dataset.i, true); });
+  }
+  function renderAll(){ renderPlayers(); renderBoard(); renderEval(); renderInfo(); renderMoves(); renderSummary(); renderChart(); }
+
+  function go(i, withSound){
+    if (!positions.length) return;
+    const prev = cur;
+    cur = Math.max(0, Math.min(positions.length-1, i));
+    if (withSound && cur > 0 && cur !== prev) playSound(positions[cur]);
+    renderPlayers(); renderBoard(); renderEval(); renderInfo(); renderChart();
+    document.querySelectorAll('td.m').forEach(td => td.classList.toggle('cur', +td.dataset.i === cur));
+    const el = document.querySelector('td.m.cur');
+    if (el){ const box = el.closest('.scroll'), top = el.offsetTop, bot = top + el.offsetHeight;
+      if (top < box.scrollTop) box.scrollTop = top - 4; else if (bot > box.scrollTop + box.clientHeight) box.scrollTop = bot - box.clientHeight + 4; }
+  }
+  function stopAuto(){ if (playTimer){ clearInterval(playTimer); playTimer = null; $('bPlay').textContent = '⏯'; } }
+  function toggleAuto(){
+    if (playTimer){ stopAuto(); return; }
+    if (!positions.length) return;
+    if (cur >= positions.length-1) go(0);
+    $('bPlay').textContent = '⏸';
+    playTimer = setInterval(() => { if (cur >= positions.length-1) stopAuto(); else go(cur+1, true); }, 1000);
+  }
+
+  // ---------- wiring ----------
+  $('openPgn').onclick = () => { $('dlg').classList.add('open'); $('pgn').focus(); };
+  $('closeDlg').onclick = () => $('dlg').classList.remove('open');
+  $('dlg').onclick = e => { if (e.target === $('dlg')) $('dlg').classList.remove('open'); };
+  $('go').onclick = () => { ctx(); run(); };
+  $('demo').onclick = () => { ctx(); $('pgn').value = DEMO; run(); };
+  $('stop').onclick = () => { stopRequested = true; if (pending) engine.postMessage('stop'); };
+  $('sound').onclick = () => { soundOn = !soundOn; $('sound').textContent = soundOn ? '🔊' : '🔇'; try { localStorage.setItem('pgnSound', soundOn ? 'on' : 'off'); } catch(e){} if (soundOn) knock(ctx() ? actx.currentTime : 0); };
+  $('bStart').onclick = () => { stopAuto(); go(0); };
+  $('bPrev').onclick = () => { stopAuto(); go(cur-1, true); };
+  $('bNext').onclick = () => { stopAuto(); go(cur+1, true); };
+  $('bEnd').onclick = () => { stopAuto(); go(positions.length-1, true); };
+  $('bPlay').onclick = toggleAuto;
+  $('bFlip').onclick = () => { flipped = !flipped; renderPlayers(); renderBoard(); renderEval(); };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'ArrowLeft'){ stopAuto(); go(cur-1, true); e.preventDefault(); }
+    else if (e.key === 'ArrowRight'){ stopAuto(); go(cur+1, true); e.preventDefault(); }
+    else if (e.key === 'Home'){ stopAuto(); go(0); }
+    else if (e.key === 'End'){ stopAuto(); go(positions.length-1, true); }
+    else if (e.key === ' '){ toggleAuto(); e.preventDefault(); }
+    else if (e.key === 'f' || e.key === 'F') $('bFlip').click();
+    else if (e.key === 'Escape') $('dlg').classList.remove('open');
+  });
+  renderAll();
+  $('dlg').classList.add('open');
+  startEngine();
+})();
+</script>
+</body>
+</html>
