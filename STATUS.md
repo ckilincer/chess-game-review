@@ -3,6 +3,7 @@
 **Son güncelleme:** 2026-11-22 · ilk sürüm GitHub'da (`149796e`, public)
 
 ## Şu an
+- Herkese açık adres: https://ckilincer.github.io/chess-game-review/ — GitHub Pages depoda zaten açıktı (`has_pages: true`); 2026-11-22 Chrome'da "Analiz tamam" ölçüldü. Paylaşılacak link budur; artifact yalnız sahibine açık.
 - Açılış adresi (yerel): http://127.0.0.1:7777/uygulama/chessgamereview/ — SITE-PANEL `yerel_uygulama` rotası klasörü servis eder, `.js`'i `text/javascript` ile verir. Kullanıcının Chrome'unda denendi: motor "Hazır", örnek oyun "Analiz tamam" (2026-11-22).
 - Tek sayfalık oyun sonrası analiz: `index.html` + `stockfish.js` (Stockfish 10 asm.js, Worker) + `chess.js` 0.10.3.
 - Claude artifact olarak da yayında (yalnız sahibine açık): https://claude.ai/artifact/SkUwCsa8b64LccaRaxw6DQ — sürüm `1795181490-cc93`. Depodaki `index.html` ile aynı.

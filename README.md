@@ -21,6 +21,10 @@ marks inaccuracies, mistakes and blunders, and charts the time spent per move. E
 
 ## Kullanım
 
+**Hemen kullan:** https://ckilincer.github.io/chess-game-review/ — kurulum yok.
+
+Kendi bilgisayarında çalıştırmak istersen:
+
 Sayfa bir Web Worker çalıştırdığı için `index.html`'e çift tıklayarak (`file://`) açılmaz; klasörü herhangi bir statik
 sunucuyla servis etmek gerekir. `--directory` ile **bu klasörün yolunu** ver; vermezsen komutu hangi klasörde çalıştırdıysan onu servis eder ve sayfa açılmaz:
 
@@ -67,6 +71,8 @@ Bu depodaki kendi kodumuz MIT lisanslıdır (`LICENSE`). Paketlenen üçüncü t
 ---
 
 ## English
+
+**Use it online:** https://ckilincer.github.io/chess-game-review/
 
 A single-page, serverless post-game review tool. Paste a finished game's PGN; Stockfish 10 (asm.js, in a Web Worker)
 evaluates every position at a fixed depth (1–25), classifies each move by win-probability drop, shows the engine's

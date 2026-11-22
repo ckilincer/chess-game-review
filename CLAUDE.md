@@ -20,5 +20,5 @@ kurallar burada da yazılı:
 
 - Durum ve kullanıcı kararları: `STATUS.md` (önce oku) · sana hitaben özet: `PROJE.md`.
 - Gönderim: `revizyon.bat` (SITE-PANEL id `chessgamereview`).
-- Açılış adresi: http://127.0.0.1:7777/uygulama/chessgamereview/ (SITE-PANEL rotası) ve claude.ai artifact'ı; kullanıcıya `python -m http.server` tarifi verilmez.
+- Paylaşılacak adres: https://ckilincer.github.io/chess-game-review/ (GitHub Pages). Yerel: http://127.0.0.1:7777/uygulama/chessgamereview/; kullanıcıya `python -m http.server` tarifi verilmez.
 - Yalnız bitmiş oyun (fair-play). Depo PUBLIC: sır, kişisel veri, chess.com logosu/sesi girmez; `lisanslar/` silinmez.
