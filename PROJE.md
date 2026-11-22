@@ -17,7 +17,8 @@ Kod `D:\REPOS\Chess\oyun-analiz` klasöründe, GitHub'da `ckilincer/chess-game-r
 3. ✓ Tahta + yan analiz + sağda notasyon düzeni, hamle sesleri
 4. ✓ PGN çekme betiği
 5. ✓ GitHub'a ilk gönderim
-6. → Sesleri ve düzeni senin geri bildirimine göre ayarlama
+6. ✓ Herkese açık adres (GitHub Pages) ve panelde adres bloğu (22 Kasım)
+7. → Sesleri ve düzeni senin geri bildirimine göre ayarlama
 
 ## Şu an
 - 2026-11-22: Herkese açık adres: https://ckilincer.github.io/chess-game-review/ (GitHub Pages; kullanıcının Chrome'unda örnek oyun analiz edildi).
@@ -26,7 +27,8 @@ Kod `D:\REPOS\Chess\oyun-analiz` klasöründe, GitHub'da `ckilincer/chess-game-r
 - 2026-11-20: Analiz sayfası yeni düzen ve seslerle claude.ai'de yayında.
 
 ## Senin yapacakların
-1. Analiz sayfasında sesleri dinleyip yeni düzenin ekranında nasıl durduğunu söyle.
+1. Linki (https://ckilincer.github.io/chess-game-review/) bir arkadaşına gönder; onun bilgisayarında açılıp "Hazır" yazıyorsa bana söyle (başka bilgisayarda henüz denenmedi).
+2. Analiz sayfasında sesleri dinleyip yeni düzenin ekranında nasıl durduğunu söyle.
 
 ## Sıradaki işler
 - Değişiklikleri `revizyon.bat` ile gönder.

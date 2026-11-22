@@ -10,11 +10,12 @@
 - `pgn_cek.py`: chess.com public API'den bitmiş oyun PGN'i; SSL hatasında Windows `curl`'üne düşer.
 
 ## Sırada
+- Herkese açık linkin başka bir bilgisayarda açıldığını kullanıcıdan teyit et (yalnız kullanıcının Chrome'unda ölçüldü).
 - Gönderimler `revizyon.bat` (id `chessgamereview`) ile; `ilk-kurulum.bat` bir kez çalıştı, tekrar gerekmez.
 - Kullanıcıdan: yeni düzen ve seslerin gerçek ekranda/hoparlörde nasıl olduğu.
 
 ## Son oturumlar
-- 2026-11-22: Kullanıcı panelde adresi bulamadı; README'deki `python -m http.server` tarifi onda çalışmadı (sebebi ölçülmedi: yanlış klasör ya da Windows'un `.js` MIME kaydı olası). Panel rotası + adres bloğu eklendi, PROJE/README düzeltildi.
+- 2026-11-22: Kullanıcı panelde adresi bulamadı; README'deki `python -m http.server` tarifi onda çalışmadı (sebebi ölçülmedi: yanlış klasör ya da Windows'un `.js` MIME kaydı olası). Panel rotası + adres bloğu eklendi, PROJE/README düzeltildi. Aynı gün: GitHub Pages adresi bulundu (zaten açıktı), panelde en üste kondu, README'ye "Hemen kullan" linki; CLAUDE.md (D147 bloğu) eklendi. Gönderildi (`0f50df3`, YEŞİL). Ders: kök D169.
 - 2026-11-20 (2): Kod `D:\REPOS\Chess\oyun-analiz`'e taşındı; `ilk-kurulum.bat` ile `ckilincer/chess-game-review` (public) açıldı, `git ls-remote` = yerel `149796e` (ölçüldü). Panel kaydı `chessgamereview` eklendi. Kullanıcı betik sonundaki `pause`'dan ("press any key") rahatsız: kaldırıldı.
 - 2026-11-20: Canlı hamle önerici isteği reddedildi (fair-play), yerine oyun sonrası analiz yapıldı. Sürümler: yeşil tahta + cburnett taşlar; derinlik 1–25 + Durdur; üç sütunlu düzen (tahta ekran yüksekliğinde, yanında analiz, sağda dar notasyon), oyuncu saatleri, WebAudio hamle sesleri, otomatik oynatma. Headless Chrome'da üç boyutta denendi (hata yok). Sesler dinlenemedi.
 - 2026-11-20: `pgn_cek.py` kurum ağında çalışmadı: Python ve curl/schannel ikisi de UNTRUSTED_ROOT — kurum ağı chess.com'u engelleyip TLS'i kendi köküyle kesiyor (kullanıcı chess.com'a yalnız tarayıcıda VPN ile giriyor). Evde/mobil ağda denenmedi.
