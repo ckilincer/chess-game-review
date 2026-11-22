@@ -21,13 +21,16 @@ marks inaccuracies, mistakes and blunders, and charts the time spent per move. E
 
 ## Kullanım
 
-Sayfa bir Web Worker çalıştırdığı için `file://` ile çift tıklayarak açılmaz; küçük bir yerel sunucu gerekir:
+Sayfa bir Web Worker çalıştırdığı için `index.html`'e çift tıklayarak (`file://`) açılmaz; klasörü herhangi bir statik
+sunucuyla servis etmek gerekir. `--directory` ile **bu klasörün yolunu** ver; vermezsen komutu hangi klasörde çalıştırdıysan onu servis eder ve sayfa açılmaz:
 
 ```
-python -m http.server 8000
+python -m http.server 8000 --directory KLASORUN_YOLU
 ```
 
-sonra tarayıcıda `http://localhost:8000` adresini aç → **PGN yükle** → chess.com'da oyunu aç, *Paylaş → PGN → Kopyala*, yapıştır → **Analiz et**.
+sonra tarayıcıda `http://localhost:8000/` adresini aç. Durum satırı "Hazır" demiyorsa sunucu `.js` dosyalarını yanlış
+türle (`text/plain`) veriyordur — Windows'ta kayıt defterindeki `.js` kaydı buna yol açabilir; o durumda başka bir statik
+sunucu kullan. Sonra → **PGN yükle** → chess.com'da oyunu aç, *Paylaş → PGN → Kopyala*, yapıştır → **Analiz et**.
 
 ### PGN'i komut satırından çekmek: `pgn_cek.py`
 
